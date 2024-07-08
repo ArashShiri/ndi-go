@@ -1,44 +1,59 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
 package ndi
 
 import (
+	"log"
 	"syscall"
 	"unsafe"
+)
+
+var (
+	ndiLib                 = syscall.NewLazyDLL("Processing.NDI.Lib.x64.dll")
+	ndiLibSendCreate       = ndiLib.NewProc("NDIlib_send_create")
+	ndiLibSendDestroy      = ndiLib.NewProc("NDIlib_send_destroy")
+	ndiLibSendSendVideoV2  = ndiLib.NewProc("NDIlib_send_send_video_v2")
+	ndiLibSendGetNoConnections = ndiLib.NewProc("NDIlib_send_get_no_connections")
 )
 
 type SendInstance struct{}
 
 func NewSendInstance(settings *SendCreateSettings) *SendInstance {
-	ret, _, eno := syscall.Syscall(funcPtrs.NDIlibSendCreate, 1, uintptr(unsafe.Pointer(settings)), 0, 0)
-	if eno != 0 {
-		panic(eno)
+	log.Println("Creating NDI send instance with settings:", settings)
+	ret, _, err := ndiLibSendCreate.Call(uintptr(unsafe.Pointer(settings)))
+	if ret == 0 {
+		log.Fatalf("Failed to create NDI send instance: %v", err)
 	}
+	log.Println("NDI send instance created successfully")
 	return (*SendInstance)(unsafe.Pointer(ret))
 }
 
 func (inst *SendInstance) Destroy() {
-	if _, _, eno := syscall.Syscall(funcPtrs.NDIlibSendDestroy, 1, uintptr(unsafe.Pointer(inst)), 0, 0); eno != 0 {
-		panic(eno)
+	log.Println("Destroying NDI send instance")
+	ret, _, err := ndiLibSendDestroy.Call(uintptr(unsafe.Pointer(inst)))
+	if ret == 0 {
+		if errno, ok := err.(syscall.Errno); ok && errno != 0 {
+			log.Fatalf("Failed to destroy NDI send instance: %v", err)
+		}
 	}
+	log.Println("NDI send instance destroyed successfully")
 }
 
-//This will add a video frame.
 func (inst *SendInstance) SendVideoV2(frame *VideoFrameV2) {
-	if _, _, eno := syscall.Syscall(funcPtrs.NDIlibSendSendVideoV2, 2, uintptr(unsafe.Pointer(inst)), uintptr(unsafe.Pointer(frame)), 0); eno != 0 {
-		panic(eno)
+	//log.Println("Sending video frame:", frame)
+	ret, _, err := ndiLibSendSendVideoV2.Call(uintptr(unsafe.Pointer(inst)), uintptr(unsafe.Pointer(frame)))
+	if ret == 0 {
+		if errno, ok := err.(syscall.Errno); ok && errno != 0 {
+			log.Fatalf("Failed to send video frame: %v", err)
+		}
 	}
+	//log.Println("Video frame sent successfully")
 }
 
-//Get the current number of receivers connected to this source. This can be used to avoid even rendering when nothing is connected to the video source.
-//which can significantly improve the efficiency if you want to make a lot of sources available on the network. If you specify a timeout that is not
-//0 then it will wait until there are connections for this amount of time.
 func (inst *SendInstance) GetNumConnections(timeoutInMs uint32) (int, error) {
-	ret, _, eno := syscall.Syscall(funcPtrs.NDIlibSendGetNoConnections, 2, uintptr(unsafe.Pointer(inst)), uintptr(timeoutInMs), 0)
-	if eno != 0 {
-		return 0, Error{eno}
+	ret, _, err := ndiLibSendGetNoConnections.Call(uintptr(unsafe.Pointer(inst)), uintptr(timeoutInMs))
+	if ret == 0 {
+		if errno, ok := err.(syscall.Errno); ok && errno != 0 {
+			return 0, Error{errno}
+		}
 	}
 	return int(ret), nil
 }
