@@ -70,6 +70,10 @@ var (
 	FourCCTypeBGRA = [4]byte{'B', 'G', 'R', 'A'}
 	FourCCTypeBGRX = [4]byte{'B', 'G', 'R', 'X'}
 
+	//RGBA
+	FourCCTypeRGBA = [4]byte{'R', 'G', 'B', 'A'}
+	FourCCTypeRGBX = [4]byte{'R', 'G', 'B', 'X'}
+
 	//This is a UYVY buffer followed immediately by an alpha channel buffer.
 	//If the stride of the YCbCr component is "stride", then the alpha channel
 	//starts at image_ptr + yres*stride. The alpha channel stride is stride/2.
@@ -90,7 +94,7 @@ const (
 
 type FrameType int32
 
-//An enumeration to specify the type of a packet returned by the functions
+// An enumeration to specify the type of a packet returned by the functions
 const (
 	FrameTypeNone FrameType = iota
 	FrameTypeVideo
@@ -111,7 +115,7 @@ func NewVideoFrameV2() *VideoFrameV2 {
 	return vf
 }
 
-//This describes a video frame.
+// This describes a video frame.
 type VideoFrameV2 struct {
 	Xres, Yres int32   //The resolution of this frame.
 	FourCC     [4]byte //What FourCC this is with. This can be two values.
@@ -152,7 +156,7 @@ func (vf *VideoFrameV2) SetDefault() {
 	vf.Yres = 0
 	vf.FourCC = FourCCTypeUYVA
 	vf.FrameRateN = 30000
-	vf.FrameRateD = 1001
+	vf.FrameRateD = 1000
 	vf.PictureAspectRatio = 0
 	vf.FrameFormatType = FrameFormatProgressive
 	vf.Timecode = SendTimecodeSynthesize
@@ -241,7 +245,7 @@ func NewMetadataFrame() *MetadataFrame {
 	return mf
 }
 
-//The data description for metadata
+// The data description for metadata
 type MetadataFrame struct {
 	//The length of the string in UTF8 characters. This includes the NULL terminating character.
 	//If this is 0, then the length is assume to be the length of a null terminated string.
@@ -257,7 +261,7 @@ func (mf *MetadataFrame) SetDefault() {
 	mf.Data = nil
 }
 
-//This is a private struct!
+// This is a private struct!
 type ndiLIBv5 struct {
 	// V1.5
 	NDIlibInitialize, //bool(*NDIlib_initialize)(void)
